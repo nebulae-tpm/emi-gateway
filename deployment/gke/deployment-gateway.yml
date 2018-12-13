@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-emi-gateway
+  labels:
+    run: api-emi-gateway
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http-ws
+  selector:
+    run: api-emi-gateway
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: api-emi-gateway
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: api-emi-gateway
+    spec:
+      containers:
+      - name: api-emi-gateway
+        volumeMounts:
+        - name: google-application-credentials
+          mountPath: "/etc/GOOGLE_APPLICATION_CREDENTIALS"
+          readOnly: true
+        image: nebulaepyxis/emigateway:1.0.3
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          # an http probe
+          httpGet:
+            path: /api/emi-gateway/graphiql
+            port: 3000
+          # length of time to wait for a pod to initialize
+          # after pod startup, before applying health checking
+          initialDelaySeconds: 5
+          timeoutSeconds: 10
+        resources:
+          requests:
+            cpu: "50m"
+        env:
+        - name: NODE_ENV
+          value: production
+        # GRAPHQL CONGIF      
+        - name: GRAPHQL_END_POINT_PORT
+          value: '3000'
+        - name: GRAPHQL_END_POINT_HOST
+          value: localhost
+        - name: GRAPHQL_HTTP_END_POINT
+          value: /api/emi-gateway/graphql/http
+        - name: GRAPHIQL_HTTP_END_POINT
+          value: /api/emi-gateway/graphiql
+        - name: GRAPHQL_WS_END_POINT
+          value: /api/emi-gateway/graphql/ws
+        # APOLLO ENGINE CONFIG
+        - name: APOLLO_ENGINE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: apollo
+              key: engine_api_key
+        - name: APOLLO_ENGINE_LOG_LEVEL
+          value: WARN         
+        # GCLOUD PUB_SUB CONGIF       
+        - name: BROKER_TYPE
+          value: PUBSUB         
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /etc/GOOGLE_APPLICATION_CREDENTIALS/gcloud-service-key.json  
+        - name: GCLOUD_PROJECT_ID
+          value: nebulae-pyxis  
+        - name: GATEWAY_REPLIES_TOPIC
+          value: emi-gateway-replies
+        - name: GATEWAY_REPLIES_TOPIC_SUBSCRIPTION
+          value: emi-gateway-replies
+        - name: GATEWAY_EVENTS_TOPIC
+          value: events
+        - name: GATEWAY_EVENTS_TOPIC_SUBSCRIPTION
+          value: events-emi-gateway
+        - name: GATEWAY_MATERIALIZED_VIEW_UPDATES_TOPIC
+          value: emi-gateway-materialized-view-updates
+        - name: GATEWAY_MATERIALIZED_VIEW_UPDATES_TOPIC_SUBSCRIPTION
+          value: emi-gateway-materialized-view-updates-emi-gateway
+        - name: REPLY_TIMEOUT
+          value: '2000'
+        # JWT CONGIF        
+        - name: JWT_PUBLIC_KEY
+          value: -----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArdoGFIsq/MyL3DAtpuWxg/mMvpZ81+R64TUn4JWulAbN76q5M0eXRGTkxw6Hu1odji0o++R/NjvO9IMwcgVfhMqq9zhkIITj2M/AnKyT+qg56tquRi1pEli1lpNtQl+PB38AKSbALNA0fCVq+LV03OwgYlyimZbYHmsKBmoojJBqsG0hpsthXDhQPhdTYS+3K0InhLZADK4IRQISLTh/xcShPouOCi1CzOtx3fLnw3WPbGumYXuMtwnvhPbyfKZT9Z60/1489WEs2zcXlcQJjoryFkNzztmfOVTg/Ajodt7GPksbBw2SnUkwg2jJrovdsfpyDzgQnGOw2fbBcT4CsQIDAQAB\n-----END PUBLIC KEY-----          
+              
+      volumes:
+      - name: google-application-credentials
+        secret:
+          secretName: google-application-credentials
