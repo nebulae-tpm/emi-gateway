@@ -62,12 +62,6 @@ const jwtPublicKey = process.env.JWT_PUBLIC_KEY.replace(/\\n/g, '\n');
 
 //////////////////////////////////
 
-
-app.use(function (req, res, next) {
-    console.log('LOGGED1 => ', process.env.GRAPHQL_HTTP_END_POINT, process.env.GRAPHIQL_HTTP_END_POINT);
-    next();
-  });
-
 // Additional middleware can be mounted at this point to run before Apollo.
 app.use(process.env.GRAPHQL_HTTP_END_POINT, expressJwt({
     secret: jwtPublicKey,
@@ -84,7 +78,6 @@ app.use(cors());
 const server = new ApolloServer({
     schema,
     context: ({ req }) => {
-        console.log('Authorization ======> ', req.headers['authorization'] );
         return ({
             authToken: req.authToken,
             encodedToken: req.headers['authorization'] ? req.headers['authorization'].replace(/Bearer /i, '') : undefined,
