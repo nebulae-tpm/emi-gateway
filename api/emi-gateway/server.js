@@ -3,7 +3,6 @@
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').load();
 }
- 
 
 // const graphqlServer = require('apollo-server-express');
 // const graphqlExpress = graphqlServer.graphqlExpress;
@@ -42,7 +41,6 @@ const SubscriptionServer = require('subscriptions-transport-ws').SubscriptionSer
 const expressJwt = require('express-jwt');
 //This is for validation through websockets
 const jsonwebtoken = require('jsonwebtoken');
-
 
 //Service Port
 const PORT = process.env.GRAPHQL_END_POINT_PORT || 3000;
