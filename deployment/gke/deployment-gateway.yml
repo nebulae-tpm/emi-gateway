@@ -36,13 +36,13 @@ spec:
         ports:
         - containerPort: 3000
         livenessProbe:
-          # tcp probe
-          tcpSocket:
-            port: 3000
-          # an http probe
-          # httpGet:
-          #   path: /api/emi-gateway/graphql/http
+          # # tcp probe
+          # tcpSocket:
           #   port: 3000
+          # an http probe
+          httpGet:
+            path: /api/emi-gateway/graphql/liveness
+            port: 3000
           # length of time to wait for a pod to initialize
           # after pod startup, before applying health checking
           initialDelaySeconds: 5
