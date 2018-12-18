@@ -234,7 +234,7 @@ class PubSubBroker {
         .subscribe(
             ({ subscription, topicName, subscriptionName }) => {
                 subscription.on(`message`, message => {
-                    console.log('Received message', new Date(), topicName, message.attributes.correlationId, JSON.parse(message.data));
+                    //console.log('Received message', new Date(), topicName, message.attributes.correlationId, JSON.parse(message.data));
                     this.replies$.next(
                         {
                             topic: topicName,
@@ -246,7 +246,7 @@ class PubSubBroker {
                         }
                     );
                     message.ack();
-                    console.log('****** ACK MESSAGE ', message.attributes.correlationId);
+                    //console.log('****** ACK MESSAGE ', message.attributes.correlationId);
                 });
                 console.log(`PubSubBroker is listening to ${topicName} under the subscription ${subscriptionName}`);
             },

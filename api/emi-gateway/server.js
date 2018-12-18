@@ -88,7 +88,7 @@ const server = new ApolloServer({
                 broker,
             });
         }
-    },
+	},
     introspection: true,
     //playground: true,
     playground: {
@@ -100,7 +100,7 @@ const server = new ApolloServer({
     },
     subscriptions: {
         path: process.env.GRAPHQL_WS_END_POINT,
-        onConnect: async (connectionParams, webSocket, connectionContext) => {
+        onConnect: async (connectionParams, webSocket, connectionContext) => {           
             console.log(`GraphQL_WS.onConnect: origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url}`);
             const encondedToken$ = connectionParams.authToken
                 ? of(connectionParams.authToken)
@@ -112,7 +112,9 @@ const server = new ApolloServer({
                 throw new Error('Missing auth token!');
             }
             //this is the default action to do when unsuscribing                
-            const authToken = await encondedToken$.map(encondedToken => jsonwebtoken.verify(encondedToken, jwtPublicKey))
+            const authToken = await encondedToken$.pipe(
+                map(encondedToken => jsonwebtoken.verify(encondedToken, jwtPublicKey))
+            )
                 .toPromise()
                 .catch(error => console.error(`Failed to verify jwt token on WebSocket channel: ${error.message}`, error));
             const encondedToken = await encondedToken$.toPromise()
@@ -148,71 +150,22 @@ const engine = new ApolloEngine({
     logging: {
         level: process.env.APOLLO_ENGINE_LOG_LEVEL // opts: DEBUG, INFO (default), WARN or ERROR.
     },
-  });
+});
 
 // Wrap the Express server and combined with WebSockets
-//const ws = http.createServer(app);
+const ws = http.createServer(app);
+server.installSubscriptionHandlers(ws);
 
 engine.listen({
     port: PORT,
-    //httpServer: ws,  
-    expressApp: app,
+    httpServer: ws,  
+    //expressApp: app,
     graphqlPaths: [
         process.env.GRAPHQL_HTTP_END_POINT
         ,process.env.GRAPHIQL_HTTP_END_POINT
     ],
 },
  () => {
-
-    // new SubscriptionServer(
-    //     {
-    //         execute,
-    //         subscribe,
-    //         schema,
-    //         onConnect: async (connectionParams, webSocket, connectionContext) => {
-    //             console.log(`GraphQL_WS.onConnect: origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url}`);
-    //             const encondedToken$ = connectionParams.authToken
-    //                 ? of(connectionParams.authToken)
-    //                 : connectionContext.request.headers['authorization']
-    //                     ? of(connectionContext.request.headers['authorization'])
-    //                         .pipe( map(header => header.replace('Bearer ', '')) )
-    //                     : undefined;
-    //             if (!encondedToken$) {
-    //                 throw new Error('Missing auth token!');
-    //             }
-    //             //this is the default action to do when unsuscribing                
-    //             const authToken = await encondedToken$.map(encondedToken => jsonwebtoken.verify(encondedToken, jwtPublicKey))
-    //                 .toPromise()
-    //                 .catch(error => console.error(`Failed to verify jwt token on WebSocket channel: ${error.message}`, error));
-    //             const encondedToken = await encondedToken$.toPromise()
-    //                 .catch(error => console.error(`Failed to extract decoded jwt token on WebSocket channel: ${error.message}`, error));
-    //             return { broker, authToken, encondedToken, webSocket };
-    //         },
-    //         onDisconnect: (webSocket, connectionContext) => {
-    //             if(webSocket.onUnSubscribe){
-    //                 webSocket.onUnSubscribe.subscribe(
-    //                     (evt) => console.log(`webSocket.onUnSubscribe: ${JSON.stringify({evt})};  origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url};`),
-    //                     error => console.error(`GraphQL_WS.onDisconnect + onUnSubscribe; origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url}; Error: ${error.message}`, error),
-    //                     () => console.log(`GraphQL_WS.onDisconnect + onUnSubscribe: Completed OK; origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url};`)
-    //                 );
-    //             }else{
-    //                 console.log(`GraphQL_WS.onDisconnect; origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url}; WARN: no onUnSubscribe callback found`);
-    //             }                
-    //         },
-    //         // DO NOT ACTIVATE: FOR SOME REASON THIS MESS UP WITH CHAIN AND DOES NOT INJECT THE ARG AND CONTEXT ON THE RESOLVER
-    //         // onOperation: (message, params, webSocket) => {
-    //         //     console.log(`GraphQL_WS.onOperation: ${JSON.stringify({ message, params })}`);
-    //         //     return message;
-    //         // },
-    //         onOperationDone: webSocket => {
-    //             console.log(`GraphQL_WS.onOperationDone ==================  ${Object.keys(webSocket)}`);
-    //         },
-    //     },
-    //     {
-    //         server: ws,
-    //         path: process.env.GRAPHQL_WS_END_POINT,
-    //     });
-
     console.log(`Apollo Server is now running on http://localhost:${PORT}`);
     console.log(`HTTP END POINT: http://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_HTTP_END_POINT}`);
     console.log(`WEBSOCKET END POINT: ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`);

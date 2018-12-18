@@ -31,7 +31,7 @@ spec:
         - name: google-application-credentials
           mountPath: "/etc/GOOGLE_APPLICATION_CREDENTIALS"
           readOnly: true
-        image: nebulaetpm/emigateway:0.0.12
+        image: nebulaetpm/emigateway:0.0.13
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
