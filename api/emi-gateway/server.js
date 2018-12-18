@@ -25,7 +25,6 @@ const { ApolloServer, graphqlExpress, makeExecutableSchema } = require('apollo-s
 // const fileLoader = mergeGraphqlSchemas.fileLoader;
 // const mergeTypes = mergeGraphqlSchemas.mergeTypes;
 
-
 const Rx = require('rxjs');
 const express = require('express');
 const mergeGraphqlSchemas = require('merge-graphql-schemas');
