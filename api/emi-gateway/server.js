@@ -85,14 +85,14 @@ const server = new ApolloServer({
         })
     },
     introspection: true,
-    playground: true,
-    // playground: {
-    //   endpoint: process.env.GRAPHIQL_HTTP_END_POINT,
-    //   subscriptionEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`,
-    //   settings: {
-    //     'editor.theme': 'dark'
-    //   }
-    // },
+    //playground: true,
+    playground: {
+      endpoint: process.env.GRAPHIQL_HTTP_END_POINT,
+      subscriptionEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`,
+      settings: {
+        'editor.theme': 'dark'
+      }
+    },
     tracing: true,
     cacheControl: true
   });
