@@ -84,6 +84,8 @@ const server = new ApolloServer({
             broker,
         })
     },
+    introspection: true,
+    //playground: true,
     playground: {
       endpoint: process.env.GRAPHIQL_HTTP_END_POINT,
       subscriptionEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`,
