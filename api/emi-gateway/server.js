@@ -58,8 +58,6 @@ const app = express();
 
 const jwtPublicKey = process.env.JWT_PUBLIC_KEY.replace(/\\n/g, '\n');
 
-//////////////////////////////////
-
 // Additional middleware can be mounted at this point to run before Apollo.
 app.use(process.env.GRAPHQL_HTTP_END_POINT, expressJwt({
     secret: jwtPublicKey,
@@ -101,8 +99,6 @@ const server = new ApolloServer({
 
   server.applyMiddleware({ app, path: process.env.GRAPHQL_HTTP_END_POINT });
 
-/////////////////////////////////
-
 // ApolloEngine
 const { ApolloEngine } = require('apollo-engine');
 
@@ -115,37 +111,6 @@ const engine = new ApolloEngine({
         level: process.env.APOLLO_ENGINE_LOG_LEVEL // opts: DEBUG, INFO (default), WARN or ERROR.
     },
   });
-
-
-// //Validate JWT token throug Express HTTP
-// app.use(
-//     process.env.GRAPHQL_HTTP_END_POINT,
-//     bodyParser.json(),
-//     expressJwt({
-//         secret: jwtPublicKey,
-//         requestProperty: 'authToken',
-//         credentialsRequired: true,
-//         algorithms: ['RS256']
-//     }), graphqlExpress(req => ({
-//         schema,
-//         context: {
-//             authToken: req.authToken,
-//             encodedToken: req.headers['authorization'] ? req.headers['authorization'].replace(/Bearer /i, '') : undefined,
-//             broker,
-//         },
-//         tracing: true,
-//         cacheControl: true
-//     })));
-
-// // Expose GraphiQl interface
-// app.use(process.env.GRAPHIQL_HTTP_END_POINT, graphiqlExpress(
-//     {
-//         endpointURL: process.env.GRAPHQL_HTTP_END_POINT,
-//         subscriptionsEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`
-//     }
-// ));
-
-
 
 // Wrap the Express server and combined with WebSockets
 const ws = http.createServer(app);
