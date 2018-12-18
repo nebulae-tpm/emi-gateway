@@ -1,12 +1,12 @@
 const withFilter = require('graphql-subscriptions').withFilter;
 const PubSub = require('graphql-subscriptions').PubSub;
 const pubsub = new PubSub();
-const Rx = require('rxjs');
+const { of, Observable } = require('rxjs');
 
 module.exports = {
   Query: {
     author(_, { firstName, lastName }, context, info) {
-      return { id: '1233', firstName, lastName, age:  1523645197736};
+      return { id: '1233', firstName, lastName, age:  23};
     },
   },
   Mutation: {
@@ -18,7 +18,6 @@ module.exports = {
   },
   Subscription: {
     authorEvent: {
-
       subscribe: withFilter((payload, variables, context, info) => {
         const subscription = context.broker.getEvents$(['authorEvent']).subscribe(
           evt => {
@@ -29,7 +28,7 @@ module.exports = {
           () => console.log('authorEvent listener STOPED :D')
         );
 
-        context.webSocket.onUnSubscribe = Rx.Observable.create((observer) => {
+        context.webSocket.onUnSubscribe = Observable.create((observer) => {
           subscription.unsubscribe();
           observer.next('rxjs subscription had been terminated');
           observer.complete();
@@ -43,7 +42,7 @@ module.exports = {
     },
     authorAdded: {
       subscribe(payload, variables, context, info) {
-        context.webSocket.onUnSubscribe = Rx.Observable.of('ACTION RX STREAM');
+        context.webSocket.onUnSubscribe = of('ACTION RX STREAM');
         return pubsub.asyncIterator('authorAdded');
       },
     }

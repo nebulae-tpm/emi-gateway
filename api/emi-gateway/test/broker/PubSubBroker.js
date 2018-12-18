@@ -1,6 +1,7 @@
 // TEST LIBS
 const assert = require('assert');
-const Rx = require('rxjs');
+const { map, switchMap, delay } = require('rxjs/operators');
+const { of, BehaviorSubject, forkJoin } = require('rxjs');
 
 //LIBS FOR TESTING
 const PubSubBroker = require('../../broker/PubSubBroker');
@@ -29,48 +30,43 @@ describe('PUBSUB BROKER', function () {
         it('Publish and recive response using forward$ + getMessageReply$', function (done) {
             this.timeout(10000);
             pubsubBroker.forward$('Test','Test', payload)
-                .switchMap((sentMessageId) => Rx.Observable.forkJoin(
-                    //listen for the reply
+            .pipe(
+                switchMap(sentMessageId => forkJoin(
                     pubsubBroker.getMessageReply$(sentMessageId, 9500, false),
-
-                    //send a dummy reply, but wait a litle bit before send it so the listener is ready
-                    Rx.Observable.of({})
-                        .delay(1000)
-                        .switchMap(() => pubsubBroker.forward$('emi-gateway-replies','Test', { x: 1, y: 2, z: 3 }, { correlationId: sentMessageId }))
-
-                )).subscribe(
+                    of({})
+                    .pipe(
+                        delay(1000),
+                        switchMap(() => pubsubBroker.forward$('emi-gateway-replies','Test', { x: 1, y: 2, z: 3 }, { correlationId: sentMessageId }) )
+                    )
+                ) )
+            ).subscribe(
                     ([response, sentResponseMessageId]) => {
                         assert.deepEqual(response, { x: 1, y: 2, z: 3 });
                     },
-                    error => {
-                        return done(new Error(error));
-                    },
-                    () => {
-                        return done();
-                    }
+                    error => done(new Error(error)),
+                    () => done()
                 );
         });
+
         // it('Publish and recive response using forwardAndGetReply$', function (done) {
 
         //     const messageId = uuidv4();
-        //     Rx.Observable.forkJoin(
+        //     Observable.forkJoin(
         //         //send payload and listen for the reply
         //         mqttBroker.forwardAndGetReply$('Test', payload, 1800, false, { messageId }),
 
         //         //send a dummy reply, but wait a litle bit before send it so the listener is ready
-        //         Rx.Observable.of({})
-        //             .delay(200)
-        //             .switchMap(() => mqttBroker.forward$('emi-gateway-replies-test', { x: 1, y: 2, z: 3 }, { correlationId: messageId }))
+        //         Observable.of({})
+        //           .pipe(
+        //              delay(200),
+        //              switchMap(() => mqttBroker.forward$('emi-gateway-replies-test', { x: 1, y: 2, z: 3 }, { correlationId: messageId }))
+        //            )
         //     ).subscribe(
         //         ([response, sentResponseMessageId]) => {
         //             assert.deepEqual(response, { x: 1, y: 2, z: 3 });
         //         },
-        //         error => {
-        //             return done(new Error(error));
-        //         },
-        //         () => {
-        //             return done();
-        //         }
+        //         error => done(new Error(error)),
+        //         () => done()
         //     );
         // });
     });

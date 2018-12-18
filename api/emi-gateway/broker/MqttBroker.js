@@ -1,7 +1,8 @@
 'use strict'
 
 var mqtt = require('mqtt');
-const Rx = require('rxjs');
+const { map, switchMap, filter, first, timeout } = require('rxjs/operators');
+const { of, BehaviorSubject } = require('rxjs');
 const uuidv4 = require('uuid/v4');
 
 class MqttBroker {
@@ -16,7 +17,7 @@ class MqttBroker {
         /**
          * Rx Subject for every message reply
          */
-        this.replies$ = new Rx.BehaviorSubject();
+        this.replies$ = new BehaviorSubject();
 
         /**
          * MQTT Client
@@ -51,7 +52,9 @@ class MqttBroker {
      */
     forwardAndGetReply$(topic, type, payload, timeout = this.replyTimeout, ignoreSelfEvents = true, ops) {
         return this.forward$(topic, type, payload, ops)
-            .switchMap((messageId) => this.getMessageReply$(messageId, timeout, ignoreSelfEvents))
+        .pipe(
+            switchMap((messageId ) => this.getMessageReply$(messageId, timeout, ignoreSelfEvents))
+        );
     }
 
 
@@ -59,17 +62,20 @@ class MqttBroker {
      * Returns an observable that waits for the message response or throws an error if timeout is exceded
      * The observable extract the message.data and resolves to it
      * @param {string} correlationId 
-     * @param {number} timeout 
+     * @param {number} timeoutLimit 
      */
-    getMessageReply$(correlationId, timeout = this.replyTimeout, ignoreSelfEvents = true) {
+    getMessageReply$(correlationId, timeoutLimit = this.replyTimeout, ignoreSelfEvents = true) {
         return this.replies$
-            .filter(msg => msg)
-            .filter(msg => msg.topic === this.gatewayRepliesTopic)
-            .filter(msg => !ignoreSelfEvents || msg.attributes.senderId !== this.senderId)
-            .filter(msg => msg && msg.correlationId === correlationId)
-            .map(msg => msg.data)
-            .timeout(timeout)
-            .first();
+        .pipe(
+            filter(msg => msg),
+            filter(msg => msg.topic === this.gatewayRepliesTopic),
+            filter(msg => !ignoreSelfEvents || msg.attributes.senderId !== this.senderId),
+            filter(msg => msg && msg.correlationId === correlationId),
+            map(msg => msg.data),
+            timeout(timeoutLimit),
+            first()
+        );
+            
     }
 
     /**
@@ -79,10 +85,13 @@ class MqttBroker {
      */
     getEvents$(types, ignoreSelfEvents = true) {
         return this.replies$
-            .filter(msg => msg)
-            .filter(msg => msg.topic === this.gatewayEventsTopic)
-            .filter(msg => types ? types.indexOf(msg.type) !== -1 : true)
-            .filter(msg => !ignoreSelfEvents || msg.attributes.senderId !== this.senderId);
+            .pipe(
+                filter(msg => msg),
+                filter(msg => msg.topic === this.gatewayEventsTopic),
+                filter(msg => types ? types.indexOf(msg.type) !== -1 : true),
+                filter(msg => !ignoreSelfEvents || msg.attributes.senderId !== this.senderId)
+            )
+
     }
 
     /**
@@ -92,10 +101,12 @@ class MqttBroker {
      */
     getMaterializedViewsUpdates$(types, ignoreSelfEvents = true) {
         return this.replies$
-            .filter(msg => msg)
-            .filter(msg => msg.topic === this.materializedViewTopic)
-            .filter(msg => types ? types.indexOf(msg.type) !== -1 : true)
-            .filter(msg => !ignoreSelfEvents || msg.attributes.senderId !== this.senderId);
+        .pipe(
+            filter(msg => msg),
+            filter(msg => msg.topic === this.materializedViewTopic),
+            filter(msg => types ? types.indexOf(msg.type) !== -1 : true),
+            filter(msg => !ignoreSelfEvents || msg.attributes.senderId !== this.senderId)
+        )            
     }
 
     /**
@@ -121,12 +132,13 @@ class MqttBroker {
             }
         );
 
-        return Rx.Observable.of(0)
-            .map(() => {
-                this.mqttClient.publish(`${topicName}`, dataBuffer, { qos: 0 });
-                return uuid;
-            })
-            ;
+        return of({})
+            .pipe(
+                map(() => {
+                    this.mqttClient.publish(`${topicName}`, dataBuffer, { qos: 0 });
+                    return uuid;
+                })
+            );
     }
 
 
@@ -141,7 +153,7 @@ class MqttBroker {
             that.mqttClient.subscribe(`${that.gatewayRepliesTopic}`);
             that.mqttClient.subscribe(`${that.gatewayEventsTopic}`);
             that.mqttClient.subscribe(`${that.materializedViewTopic}`);
-            console.log(`Mqtt client subscribed to ${that.gatewayRepliesTopic} and ${that.gatewayEventsTopic}`);
+            console.log(`Mqtt client subscribed to ${that.gatewayRepliesTopic},  ${that.gatewayEventsTopic} and ${that.materializedViewTopic}`);
         });
 
         this.mqttClient.on('message', function (topic, message) {
