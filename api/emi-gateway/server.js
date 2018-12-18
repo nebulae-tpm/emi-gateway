@@ -19,7 +19,6 @@ const { ApolloServer, graphqlExpress, makeExecutableSchema } = require('apollo-s
 
 ////////////////////////
 
-
 // const graphqlTools = require('graphql-tools');
 // const path = require('path');
 // const fileLoader = mergeGraphqlSchemas.fileLoader;

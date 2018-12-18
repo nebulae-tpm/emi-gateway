@@ -31,19 +31,22 @@ spec:
         - name: google-application-credentials
           mountPath: "/etc/GOOGLE_APPLICATION_CREDENTIALS"
           readOnly: true
-        image: nebulaetpm/emigateway:0.0.7
+        image: nebulaetpm/emigateway:0.0.8
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
-        # livenessProbe:
-        #   # an http probe
-        #   httpGet:
-        #     path: /api/emi-gateway/graphql/http
-        #     port: 3000
-        #   # length of time to wait for a pod to initialize
-        #   # after pod startup, before applying health checking
-        #   initialDelaySeconds: 5
-        #   timeoutSeconds: 10
+        livenessProbe:
+          # tcp probe
+          tcpSocket:
+            port: 3000
+          # an http probe
+          # httpGet:
+          #   path: /api/emi-gateway/graphql/http
+          #   port: 3000
+          # length of time to wait for a pod to initialize
+          # after pod startup, before applying health checking
+          initialDelaySeconds: 5
+          timeoutSeconds: 10
         resources:
           requests:
             cpu: "50m"
