@@ -4,7 +4,8 @@ if (process.env.NODE_ENV !== 'production') {
     require('dotenv').load();
 }
  
-const Rx = require('rxjs');
+const { map, toPromise, catchError} = require('rxjs/operators');
+const { Observable } = require('rxjs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const graphqlServer = require('apollo-server-express');
@@ -107,19 +108,16 @@ engine.listen({
             onConnect: async (connectionParams, webSocket, connectionContext) => {
                 console.log(`GraphQL_WS.onConnect: origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url}`);
                 const encondedToken$ = connectionParams.authToken
-                    ? Rx.Observable.of(connectionParams.authToken)
+                    ? Observable.of(connectionParams.authToken)
                     : connectionContext.request.headers['authorization']
-                        ? Rx.Observable.of(connectionContext.request.headers['authorization'])
-                            .map(header => {
-                                return header.replace('Bearer ', '');
-                            })
+                        ? Observable.of(connectionContext.request.headers['authorization'])
+                            .pipe( map(header => header.replace('Bearer ', '')) )
                         : undefined;
                 if (!encondedToken$) {
                     throw new Error('Missing auth token!');
                 }
                 //this is the default action to do when unsuscribing                
-                const authToken = await encondedToken$.map(
-                    encondedToken => jsonwebtoken.verify(encondedToken, jwtPublicKey))
+                const authToken = await encondedToken$.map(encondedToken => jsonwebtoken.verify(encondedToken, jwtPublicKey))
                     .toPromise()
                     .catch(error => console.error(`Failed to verify jwt token on WebSocket channel: ${error.message}`, error));
                 const encondedToken = await encondedToken$.toPromise()
