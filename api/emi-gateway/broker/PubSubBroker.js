@@ -1,7 +1,7 @@
 'use strict'
 
 const { map, switchMap, filter, first, timeout, mergeMap, tap} = require('rxjs/operators');
-const { Subject, Observable } = require('rxjs');
+const { Subject, of, from, defer } = require('rxjs');
 const uuidv4 = require('uuid/v4');
 
 class PubSubBroker {
@@ -118,15 +118,17 @@ class PubSubBroker {
         return this.getTopic$(topicName)
             .pipe(
                 mergeMap(topic =>
-                    Observable.fromPromise(
-                        topic.publisher().publish(dataBuffer,
+                    // Observable.fromPromise(
+                        defer(() => topic.publisher().publish(dataBuffer,
                             {
                                 senderId: this.senderId,
                                 correlationId,
                                 type,
                                 replyTo: this.gatewayRepliesTopic
                             })
-                    )
+                        )
+                        
+                    // )
                 ),
                 tap(messageId => console.log(`Message published through ${topicName}, MessageId=${messageId}`, new Date()))
             );
@@ -161,7 +163,7 @@ class PubSubBroker {
         if (!cachedTopic) {
             //if not cached, then tries to know if the topic exists
             const topic = this.pubsubClient.topic(topicName);
-            return Observable.fromPromise(topic.exists())
+            return defer(() => topic.exists())
             .pipe(
                 map(data => data[0]),
                 switchMap(exists => {
@@ -169,7 +171,7 @@ class PubSubBroker {
                         //if it does exists, then store it on the cache and return it
                         this.verifiedTopics[topicName] = topic;
                         console.log(`Topic ${topicName} already existed and has been set into the cache`);
-                        return Observable.of(topic);
+                        return of(topic);
                     } else {
                         //if it does NOT exists, then create it, store it in the cache and return it
                         return this.createTopic$(topicName);
@@ -178,7 +180,7 @@ class PubSubBroker {
             );
         }
         //return cached topic
-        return Observable.of(cachedTopic);
+        return of(cachedTopic);
     }
 
     /**
@@ -186,12 +188,12 @@ class PubSubBroker {
      * @param {string} topicName 
      */
     createTopic$(topicName) {
-        return Observable.fromPromise(this.pubsubClient.createTopic(topicName))
+        return defer(() => this.pubsubClient.createTopic(topicName))
         .pipe(
-            switchMap(data => {
+            switchMap(() => {
                 this.verifiedTopics[topicName] = this.pubsubClient.topic(topicName);
                 console.log(`Topic ${topicName} have been created and set into the cache`);
-                return Observable.of(this.verifiedTopics[topicName]);                
+                return of(this.verifiedTopics[topicName]);                
             } )
         );
     }
@@ -207,7 +209,7 @@ class PubSubBroker {
         return this.getTopic$(topicName)
             .pipe(
                 // tap(topic => console.log('getTopic => ', topic.name)),
-                mergeMap(topic => Observable.fromPromise(topic.subscription(subscriptionName).get({ autoCreate: true }))),
+                mergeMap(topic => defer(() => topic.subscription(subscriptionName).get({ autoCreate: true }))),
                 map(results => ({
                     subscription: results[0],
                     topicName,
@@ -220,9 +222,9 @@ class PubSubBroker {
      * Starts to listen messages
      */
     startMessageListener() {
-        Observable.of({})
+        of({})
         .pipe(
-            mergeMap(() => Observable.from([
+            mergeMap(() => from([
                 { topicName: this.gatewayRepliesTopic, topicSubscriptionName: this.gatewayRepliesTopicSubscription },
                 { topicName: this.gatewayEventsTopic, topicSubscriptionName: this.gatewayEventsTopicSubscription },
                 { topicName: this.materializedViewTopic, topicSubscriptionName: this.materializedViewTopicSubscription }

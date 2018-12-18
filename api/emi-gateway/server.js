@@ -5,7 +5,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
  
 const { map, catchError} = require('rxjs/operators');
-const { Observable } = require('rxjs');
+const { of } = require('rxjs');
 
 // const graphqlServer = require('apollo-server-express');
 // const graphqlExpress = graphqlServer.graphqlExpress;
@@ -167,9 +167,9 @@ engine.listen({
             onConnect: async (connectionParams, webSocket, connectionContext) => {
                 console.log(`GraphQL_WS.onConnect: origin=${connectionContext.request.headers.origin} url=${connectionContext.request.url}`);
                 const encondedToken$ = connectionParams.authToken
-                    ? Observable.of(connectionParams.authToken)
+                    ? of(connectionParams.authToken)
                     : connectionContext.request.headers['authorization']
-                        ? Observable.of(connectionContext.request.headers['authorization'])
+                        ? of(connectionContext.request.headers['authorization'])
                             .pipe( map(header => header.replace('Bearer ', '')) )
                         : undefined;
                 if (!encondedToken$) {

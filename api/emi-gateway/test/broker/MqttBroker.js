@@ -1,7 +1,7 @@
 // TEST LIBS
 const assert = require('assert');
 const { map, switchMap, delay } = require('rxjs/operators');
-const { of, BehaviorSubject, Observable } = require('rxjs');
+const { of, BehaviorSubject, Observable, forkJoin } = require('rxjs');
 const uuidv4 = require('uuid/v4');
 
 //LIBS FOR TESTING
@@ -39,9 +39,9 @@ describe('MQTT BROKER', function () {
         it('Publish and recive response using forward$ + getMessageReply$', function (done) {
             mqttBroker.forward$('Test', 'Test', payload)
             .pipe(
-                switchMap(sentMessageId => Observable.forkJoin(
+                switchMap(sentMessageId => forkJoin(
                     mqttBroker.getMessageReply$(sentMessageId, 1800, false),
-                    Observable.of({})
+                    of({})
                     .pipe(
                         delay(200),
                         switchMap(() => mqttBroker.forward$('emi-gateway-replies-test', 'Test', { x: 1, y: 2, z: 3 }, { correlationId: sentMessageId }) )                        
@@ -60,12 +60,12 @@ describe('MQTT BROKER', function () {
         it('Publish and recive response using forwardAndGetReply$', function (done) {
 
             const messageId = uuidv4();
-            Observable.forkJoin(
+                forkJoin(
                 //send payload and listen for the reply
                 mqttBroker.forwardAndGetReply$('Test','Test', payload, 1800, false, { messageId }),
 
                 //send a dummy reply, but wait a litle bit before send it so the listener is ready
-                Observable.of({})
+                of({})
                     .pipe(
                      delay(200)   ,
                      switchMap(() => mqttBroker.forward$('emi-gateway-replies-test','Test', { x: 1, y: 2, z: 3 }, { correlationId: messageId }) )

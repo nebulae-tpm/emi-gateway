@@ -1,7 +1,7 @@
 const withFilter = require('graphql-subscriptions').withFilter;
 const PubSub = require('graphql-subscriptions').PubSub;
 const pubsub = new PubSub();
-const { Observable } = require('rxjs');
+const { of, Observable } = require('rxjs');
 
 module.exports = {
   Query: {
@@ -42,7 +42,7 @@ module.exports = {
     },
     authorAdded: {
       subscribe(payload, variables, context, info) {
-        context.webSocket.onUnSubscribe = Observable.of('ACTION RX STREAM');
+        context.webSocket.onUnSubscribe = of('ACTION RX STREAM');
         return pubsub.asyncIterator('authorAdded');
       },
     }

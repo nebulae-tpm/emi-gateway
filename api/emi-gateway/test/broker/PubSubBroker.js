@@ -1,7 +1,7 @@
 // TEST LIBS
 const assert = require('assert');
 const { map, switchMap, delay } = require('rxjs/operators');
-const { of, BehaviorSubject, Observable } = require('rxjs');
+const { of, BehaviorSubject, forkJoin } = require('rxjs');
 
 //LIBS FOR TESTING
 const PubSubBroker = require('../../broker/PubSubBroker');
@@ -31,9 +31,9 @@ describe('PUBSUB BROKER', function () {
             this.timeout(10000);
             pubsubBroker.forward$('Test','Test', payload)
             .pipe(
-                switchMap(sentMessageId => Observable.forkJoin(
+                switchMap(sentMessageId => forkJoin(
                     pubsubBroker.getMessageReply$(sentMessageId, 9500, false),
-                    Observable.of({})
+                    of({})
                     .pipe(
                         delay(1000),
                         switchMap(() => pubsubBroker.forward$('emi-gateway-replies','Test', { x: 1, y: 2, z: 3 }, { correlationId: sentMessageId }) )

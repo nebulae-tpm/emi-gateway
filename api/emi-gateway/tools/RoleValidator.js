@@ -1,5 +1,5 @@
 const { map, switchMap, delay, toArray, mergeMap } = require('rxjs/operators');
-const { of, BehaviorSubject, Observable } = require('rxjs');
+const { of, BehaviorSubject, from, throwError } = require('rxjs');
 const { CustomError } = require("./customError");
 /**
  * Role validator
@@ -44,13 +44,13 @@ static checkPermissions$(
     errorMessage,
     requiredRoles
   ) {
-    return Observable.from(requiredRoles)
+    return from(requiredRoles)
     .pipe(
       map(requiredRole => !( userRoles == undefined || userRoles.length == 0 || !userRoles.includes(requiredRole)) ),
       toArray(),
       mergeMap( validRoles => (!validRoles.includes(true)) 
-        ? Observable.throw( new CustomError(contextName, method, errorCode, errorMessage) )
-        : Observable.of(validRoles)
+        ? throwError( new CustomError(contextName, method, errorCode, errorMessage) )
+        : of(validRoles)
       )
     )
   }
