@@ -4,18 +4,31 @@ if (process.env.NODE_ENV !== 'production') {
     require('dotenv').load();
 }
  
-const { map, toPromise, catchError} = require('rxjs/operators');
+const { map, catchError} = require('rxjs/operators');
 const { Observable } = require('rxjs');
+
+// const graphqlServer = require('apollo-server-express');
+// const graphqlExpress = graphqlServer.graphqlExpress;
+// const graphiqlExpress = graphqlServer.graphiqlExpress;
+// const bodyParser = require('body-parser');
+
+
+////////////////////////
+
+
+const { ApolloServer, graphqlExpress, makeExecutableSchema } = require('apollo-server-express');
+
+
+
+////////////////////////
+
+// const graphqlTools = require('graphql-tools');
+// const path = require('path');
+// const fileLoader = mergeGraphqlSchemas.fileLoader;
+// const mergeTypes = mergeGraphqlSchemas.mergeTypes;
+
 const express = require('express');
-const bodyParser = require('body-parser');
-const graphqlServer = require('apollo-server-express');
-const graphqlExpress = graphqlServer.graphqlExpress;
-const graphiqlExpress = graphqlServer.graphiqlExpress;
-const graphqlTools = require('graphql-tools');
-const path = require('path');
 const mergeGraphqlSchemas = require('merge-graphql-schemas');
-const fileLoader = mergeGraphqlSchemas.fileLoader;
-const mergeTypes = mergeGraphqlSchemas.mergeTypes;
 const gqlSchema = require('./graphql/index');
 const broker = require('./broker/BrokerFactory')();
 const cors = require('cors');
@@ -29,15 +42,62 @@ const expressJwt = require('express-jwt');
 //This is for validation through websockets
 const jsonwebtoken = require('jsonwebtoken');
 
-
 //Service Port
 const PORT = process.env.GRAPHQL_END_POINT_PORT || 3000;
 //graphql types compendium
 const typeDefs = gqlSchema.types;
 //graphql resolvers compendium
 const resolvers = gqlSchema.resolvers;
+
+
 //graphql schema = join types & resolvers
-const schema = graphqlTools.makeExecutableSchema({ typeDefs, resolvers });
+const schema = makeExecutableSchema({ typeDefs, resolvers });
+
+//Express Server
+const app = express();
+
+const jwtPublicKey = process.env.JWT_PUBLIC_KEY.replace(/\\n/g, '\n');
+
+//////////////////////////////////
+
+// Additional middleware can be mounted at this point to run before Apollo.
+app.use(process.env.GRAPHQL_HTTP_END_POINT, expressJwt({
+    secret: jwtPublicKey,
+    requestProperty: 'authToken',
+    credentialsRequired: true,
+    algorithms: ['RS256']
+}));
+
+
+// bodyParser is needed just for POST.
+app.use(cors());
+
+// GraphQL: Schema
+const server = new ApolloServer({
+    schema,
+    context: ({ req }) => {
+        return ({
+            authToken: req.authToken,
+            encodedToken: req.headers['authorization'] ? req.headers['authorization'].replace(/Bearer /i, '') : undefined,
+            broker,
+        })
+    },
+    introspection: true,
+    //playground: true,
+    playground: {
+      endpoint: process.env.GRAPHIQL_HTTP_END_POINT,
+      subscriptionEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`,
+      settings: {
+        'editor.theme': 'dark'
+      }
+    },
+    tracing: true,
+    cacheControl: true
+  });
+
+  server.applyMiddleware({ app, path: process.env.GRAPHQL_HTTP_END_POINT });
+
+/////////////////////////////////
 
 // ApolloEngine
 const { ApolloEngine } = require('apollo-engine');
@@ -52,52 +112,47 @@ const engine = new ApolloEngine({
     },
   });
 
-//Express Server
-const server = express();
-// bodyParser is needed just for POST.
-server.use(cors());
 
-const jwtPublicKey = process.env.JWT_PUBLIC_KEY.replace(/\\n/g, '\n');
+// //Validate JWT token throug Express HTTP
+// app.use(
+//     process.env.GRAPHQL_HTTP_END_POINT,
+//     bodyParser.json(),
+//     expressJwt({
+//         secret: jwtPublicKey,
+//         requestProperty: 'authToken',
+//         credentialsRequired: true,
+//         algorithms: ['RS256']
+//     }), graphqlExpress(req => ({
+//         schema,
+//         context: {
+//             authToken: req.authToken,
+//             encodedToken: req.headers['authorization'] ? req.headers['authorization'].replace(/Bearer /i, '') : undefined,
+//             broker,
+//         },
+//         tracing: true,
+//         cacheControl: true
+//     })));
 
+// // Expose GraphiQl interface
+// app.use(process.env.GRAPHIQL_HTTP_END_POINT, graphiqlExpress(
+//     {
+//         endpointURL: process.env.GRAPHQL_HTTP_END_POINT,
+//         subscriptionsEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`
+//     }
+// ));
 
-//Validate JWT token throug Express HTTP
-server.use(
-    process.env.GRAPHQL_HTTP_END_POINT,
-    bodyParser.json(),
-    expressJwt({
-        secret: jwtPublicKey,
-        requestProperty: 'authToken',
-        credentialsRequired: true,
-        algorithms: ['RS256']
-    }), graphqlExpress(req => ({
-        schema,
-        context: {
-            authToken: req.authToken,
-            encodedToken: req.headers['authorization'] ? req.headers['authorization'].replace(/Bearer /i, '') : undefined,
-            broker,
-        },
-        tracing: true,
-        cacheControl: true
-    })));
-
-// Expose GraphiQl interface
-server.use(process.env.GRAPHIQL_HTTP_END_POINT, graphiqlExpress(
-    {
-        endpointURL: process.env.GRAPHQL_HTTP_END_POINT,
-        subscriptionsEndpoint: `ws://${process.env.GRAPHQL_END_POINT_HOST}:${process.env.GRAPHQL_END_POINT_PORT}${process.env.GRAPHQL_WS_END_POINT}`
-    }
-));
 
 
 // Wrap the Express server and combined with WebSockets
-const ws = http.createServer(server);
+const ws = http.createServer(app);
+
 engine.listen({
     port: PORT,
-    httpServer: ws,    
-    // expressApp: server,
+    //httpServer: ws,  
+    expressApp: app,
     graphqlPaths: [
-        process.env.GRAPHQL_HTTP_END_POINT,
-        process.env.GRAPHIQL_HTTP_END_POINT
+        process.env.GRAPHQL_HTTP_END_POINT
+        ,process.env.GRAPHIQL_HTTP_END_POINT
     ],
 }, () => {
     new SubscriptionServer(
