@@ -1,6 +1,6 @@
 #!/bin/bash
 export DOCKERHUB_IMAGE=emigateway
-export DOCKERHUB_TAG=0.0.10
+export DOCKERHUB_TAG=0.0.11
 
 rm -rf deployment/docker/emi-gateway/
 cp -R $API_SHELL_PATH/emi-gateway deployment/docker/emi-gateway

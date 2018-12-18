@@ -117,8 +117,8 @@ const ws = http.createServer(app);
 
 engine.listen({
     port: PORT,
-    //httpServer: ws,  
-    expressApp: app,
+    httpServer: ws,  
+    //expressApp: app,
     graphqlPaths: [
         process.env.GRAPHQL_HTTP_END_POINT
         ,process.env.GRAPHIQL_HTTP_END_POINT
