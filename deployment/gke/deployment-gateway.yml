@@ -31,7 +31,7 @@ spec:
         - name: google-application-credentials
           mountPath: "/etc/GOOGLE_APPLICATION_CREDENTIALS"
           readOnly: true
-        image: nebulaetpm/emigateway:0.0.8
+        image: nebulaetpm/emigateway:0.0.9
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
@@ -62,6 +62,8 @@ spec:
           value: /api/emi-gateway/graphql/http
         - name: GRAPHIQL_HTTP_END_POINT
           value: /api/emi-gateway/graphql/http
+        - name: GRAPHQL_LIVENESS_HTTP_END_POINT
+          value: /api/emi-gateway/graphql/liveness
         - name: GRAPHQL_WS_END_POINT
           value: /api/emi-gateway/graphql/ws
         # APOLLO ENGINE CONFIG

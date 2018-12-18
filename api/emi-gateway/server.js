@@ -16,7 +16,7 @@ const { Observable } = require('rxjs');
 ////////////////////////
 
 
-const { ApolloServer, graphqlExpress, makeExecutableSchema } = require('apollo-server-express');
+const { ApolloServer, makeExecutableSchema } = require('apollo-server-express');
 
 
 
@@ -67,6 +67,10 @@ app.use(process.env.GRAPHQL_HTTP_END_POINT, expressJwt({
     credentialsRequired: true,
     algorithms: ['RS256']
 }));
+
+app.get(process.env.GRAPHQL_LIVENESS_HTTP_END_POINT, function (req, res) {
+    res.sendStatus(200) 
+});
 
 
 // bodyParser is needed just for POST.
