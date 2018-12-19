@@ -44,6 +44,10 @@ static checkPermissions$(
     errorMessage,
     requiredRoles
   ) {
+    if (requiredRoles == undefined || requiredRoles.length == 0) {
+      return of([]);
+    }
+
     return from(requiredRoles)
     .pipe(
       map(requiredRole => !( userRoles == undefined || userRoles.length == 0 || !userRoles.includes(requiredRole)) ),
