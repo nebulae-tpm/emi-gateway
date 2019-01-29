@@ -66,7 +66,6 @@ class PubSubBroker {
             );
     }
 
-
     /**
     * Returns an observable that waits for the message response or throws an error if timeout is exceded
     * The observable extract the message.data and resolves to it
